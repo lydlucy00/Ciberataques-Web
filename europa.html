@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CyberThreat 3D - Sector Europa</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #010409; font-family: 'Inter', sans-serif; color: #f3f4f6; user-select: none; -webkit-user-select: none; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .glass-panel { background: rgba(10, 15, 29, 0.75); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 1rem; }
+        @keyframes pulse-glow { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.95); } }
+        .live-dot { animation: pulse-glow 1.5s infinite ease-in-out; }
+        
+        /* Ajustes específicos para pantallas móviles */
+        @media (max-width: 768px) {
+            .mobile-stack { flex-direction: column !important; justify-content: flex-end !important; }
+            aside { width: 100% !important; max-height: 30vh !important; }
+        }
+    </style>
+</head>
+<body class="w-screen h-screen">
+    <div id="canvas-container" class="absolute inset-0 z-0"></div>
+
+    <div class="relative z-10 w-full h-full pointer-events-none p-3 md:p-6 flex flex-col justify-between">
+        <!-- Cabecera Móvil/Desktop -->
+        <header class="flex flex-wrap justify-between items-center w-full gap-2">
+            <div class="glass-panel pointer-events-auto px-3 py-1.5 md:px-4 md:py-2 flex items-center gap-2">
+                <span class="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-red-500 live-dot"></span>
+                <span class="text-[10px] md:text-xs font-semibold uppercase text-red-400 font-mono">Europa SIEM</span>
+            </div>
+            
+            <nav class="glass-panel pointer-events-auto px-2 py-1 md:px-3 md:py-1.5 flex items-center gap-1 text-[11px] md:text-xs">
+                <a href="index.html" class="px-2 py-1 rounded-lg text-white/70 hover:text-white">Global</a>
+                <a href="europa.html" class="px-2 py-1 rounded-lg bg-red-500/20 text-red-400 font-semibold border border-red-500/30">Europa</a>
+                <a href="america.html" class="px-2 py-1 rounded-lg text-white/70 hover:text-white">América</a>
+                <a href="asia.html" class="px-2 py-1 rounded-lg text-white/70 hover:text-white">Asia</a>
+                <a href="docs.html" class="px-2 py-1 rounded-lg text-cyan-300">Docs</a>
+            </nav>
+        </header>
+
+        <!-- Feed de Ataques para Móvil -->
+        <div class="flex-1 flex mobile-stack justify-between items-stretch my-2 gap-3 overflow-hidden">
+            <aside class="glass-panel pointer-events-auto w-full md:w-80 flex flex-col p-3 md:p-4 space-y-2 overflow-y-auto">
+                <h2 class="text-[10px] md:text-xs font-bold uppercase tracking-wider text-white/70 pb-1.5 border-b border-white/10">Amenazas Sectoriales (Europa)</h2>
+                <div id="attack-feed" class="space-y-1.5 text-[11px] md:text-xs font-mono overflow-y-auto max-h-40 md:max-h-72"></div>
+            </aside>
+        </div>
+    </div>
+
+    <script>
+        const EARTH_RADIUS = 5;
+        let scene, camera, renderer, controls, earthMesh, arcsGroup;
+        const CITIES = [
+            { name: "Madrid", lat: 40.4168, lon: -3.7038 },
+            { name: "Londres", lat: 51.5074, lon: -0.1278 },
+            { name: "Frankfurt", lat: 50.1109, lon: 8.6821 },
+            { name: "París", lat: 48.8566, lon: 2.3522 },
+            { name: "Ámsterdam", lat: 52.3676, lon: 4.9041 },
+            { name: "Roma", lat: 41.9028, lon: 12.4964 }
+        ];
+
+        window.addEventListener('load', () => {
+            initScene();
+            createEarth();
+            camera.position.set(-2, 4, 11);
+            controls.target.set(0, 0, 0);
+            animate();
+            setInterval(generateAttack, 500);
+        });
+
+        function initScene() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            arcsGroup = new THREE.Group();
+            scene.add(arcsGroup);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+        }
+
+        function createEarth() {
+            const textureLoader = new THREE.TextureLoader();
+            const dayTex = textureLoader.load('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg');
+            earthMesh = new THREE.Mesh(new THREE.SphereGeometry(EARTH_RADIUS, 64, 64), new THREE.MeshBasicMaterial({ map: dayTex }));
+            scene.add(earthMesh);
+        }
+
+        function getVector(lat, lon, alt) {
+            const phi = (90 - lat) * (Math.PI / 180);
+            const theta = (lon + 180) * (Math.PI / 180);
+            return new THREE.Vector3(-(alt * Math.sin(phi) * Math.cos(theta)), alt * Math.cos(phi), alt * Math.sin(phi) * Math.sin(theta));
+        }
+
+        function generateAttack() {
+            const origin = CITIES[Math.floor(Math.random() * CITIES.length)];
+            let target = CITIES[Math.floor(Math.random() * CITIES.length)];
+            while(target === origin) target = CITIES[Math.floor(Math.random() * CITIES.length)];
+
+            const start = getVector(origin.lat, origin.lon, EARTH_RADIUS + 0.02);
+            const end = getVector(target.lat, target.lon, EARTH_RADIUS + 0.02);
+            const mid = start.clone().add(end).multiplyScalar(0.5).normalize().multiplyScalar(EARTH_RADIUS + 0.5);
+
+            const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
+            const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(20)), new THREE.LineBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.8 }));
+            arcsGroup.add(line);
+
+            setTimeout(() => { arcsGroup.remove(line); }, 1000);
+
+            const feed = document.getElementById('attack-feed');
+            const item = document.createElement('div');
+            item.className = "p-1 bg-white/5 rounded border border-white/5 flex justify-between";
+            item.innerHTML = `<span>${origin.name} ➔ ${target.name}</span><span class="text-red-400 font-bold">DDoS</span>`;
+            feed.insertBefore(item, feed.firstChild);
+            if(feed.children.length > 5) feed.removeChild(feed.lastChild);
+        }
+
+        function setupEvents() {
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+        setupEvents();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if(earthMesh) earthMesh.rotation.y += 0.0005;
+            controls.update();
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>

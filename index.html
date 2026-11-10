@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Global CyberThreat 3D - Monitor en Tiempo Real</title>
+    <!-- Three.js y OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #010409; font-family: 'Inter', sans-serif; color: #f3f4f6; user-select: none; -webkit-user-select: none; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .glass-panel {
+            background: rgba(10, 15, 29, 0.7);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            border-radius: 1rem;
+        }
+        .glass-button {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.2s ease;
+        }
+        .glass-button:hover { background: rgba(255, 255, 255, 0.18); border-color: rgba(255, 255, 255, 0.3); }
+        .glass-button.active { background: rgba(239, 68, 68, 0.35); border-color: rgba(248, 113, 113, 0.6); }
+        @keyframes pulse-glow { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.95); } }
+        .live-dot { animation: pulse-glow 1.5s infinite ease-in-out; }
+        
+        /* Ajustes específicos para móviles */
+        @media (max-width: 768px) {
+            .mobile-stack { flex-direction: column !important; justify-content: flex-end !important; }
+            aside { width: 100% !important; max-height: 28vh !important; }
+        }
+    </style>
+</head>
+<body class="w-screen h-screen">
+
+    <div id="canvas-container" class="absolute inset-0 z-0"></div>
+
+    <div class="relative z-10 w-full h-full pointer-events-none p-3 md:p-6 flex flex-col justify-between">
+        <!-- Cabecera y Navegación Unificada -->
+        <header class="flex flex-wrap justify-between items-center w-full gap-2">
+            <div class="glass-panel pointer-events-auto px-3 py-2 md:px-5 md:py-3 flex items-center gap-2 md:gap-4">
+                <div class="flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-red-500 live-dot"></span>
+                    <span class="text-[10px] md:text-xs font-semibold tracking-wider uppercase text-red-400 font-mono">Radar Activo</span>
+                </div>
+                <div class="h-3 w-px bg-white/20"></div>
+                <h1 class="text-xs md:text-sm font-semibold tracking-wide text-white/90">CYBERTHREAT 3D</h1>
+            </div>
+            
+            <!-- Menú de Navegación por Continentes y Documentación -->
+            <nav class="glass-panel pointer-events-auto px-2 py-1 md:px-4 md:py-2 flex items-center gap-1 text-[11px] md:text-xs">
+                <a href="index.html" class="px-2 py-1 rounded-lg bg-red-500/20 text-red-400 font-semibold border border-red-500/30">Global</a>
+                <a href="europa.html" class="px-2 py-1 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition">Europa</a>
+                <a href="america.html" class="px-2 py-1 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition">América</a>
+                <a href="asia.html" class="px-2 py-1 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition">Asia</a>
+                <div class="h-3 w-px bg-white/20 mx-0.5"></div>
+                <a href="docs.html" class="px-2 py-1 rounded-lg text-cyan-300 hover:bg-cyan-500/20 transition flex items-center gap-1">
+                    <span>Docs</span>
+                </a>
+            </nav>
+        </header>
+
+        <!-- Paneles Centrales -->
+        <div class="flex-1 flex mobile-stack justify-between items-stretch my-2 md:my-4 gap-3 overflow-hidden">
+            <!-- Izquierda: Feed de Ciberataques -->
+            <aside class="glass-panel pointer-events-auto w-full md:w-80 flex flex-col p-3 md:p-5 space-y-2 md:space-y-4 overflow-y-auto">
+                <h2 class="text-[10px] md:text-xs font-bold uppercase tracking-wider text-white/70 pb-2 border-b border-white/10">Ataques Detectados</h2>
+                
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-white/5 p-2 rounded-xl border border-white/5">
+                        <span class="text-[9px] text-white/50 block font-mono">EVENTOS / SEC</span>
+                        <span id="attacks-sec" class="text-xs md:text-lg font-bold font-mono text-red-400">142</span>
+                    </div>
+                    <div class="bg-white/5 p-2 rounded-xl border border-white/5">
+                        <span class="text-[9px] text-white/50 block font-mono">NIVEL ALERTA</span>
+                        <span class="text-xs md:text-lg font-bold font-mono text-amber-400">CRÍTICO</span>
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-hidden">
+                    <h3 class="text-[9px] font-bold uppercase tracking-wider text-white/50 mb-1">Feed Vectorial Live</h3>
+                    <div id="attack-feed" class="space-y-1 text-[11px] font-mono overflow-y-auto max-h-32 md:max-h-64 pr-1">
+                        <!-- Items inyectados dinámicamente -->
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Derecha: Filtros de Tipos de Ataque -->
+            <aside class="glass-panel pointer-events-auto w-full md:w-72 flex flex-col p-3 md:p-5 space-y-2 md:space-y-4 overflow-y-auto">
+                <h2 class="text-[10px] md:text-xs font-bold uppercase tracking-wider text-white/70 pb-2 border-b border-white/10">Vectores Visualizados</h2>
+                
+                <div class="space-y-1.5">
+                    <button id="toggle-ddos" class="glass-button active w-full p-2 rounded-xl flex items-center justify-between text-xs text-white/90">
+                        <span>DDoS (Denegación)</span>
+                        <span class="text-[10px] font-mono text-red-400">Rojo</span>
+                    </button>
+                    <button id="toggle-ransomware" class="glass-button active w-full p-2 rounded-xl flex items-center justify-between text-xs text-white/90">
+                        <span>Ransomware / Malware</span>
+                        <span class="text-[10px] font-mono text-amber-400">Ámbar</span>
+                    </button>
+                    <button id="toggle-phishing" class="glass-button active w-full p-2 rounded-xl flex items-center justify-between text-xs text-white/90">
+                        <span>Phishing / SQL</span>
+                        <span class="text-[10px] font-mono text-cyan-400">Cian</span>
+                    </button>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Pie -->
+        <footer class="flex justify-between items-center w-full">
+            <div class="glass-panel pointer-events-auto px-3 py-1 text-[10px] text-white/60 font-mono">
+                Red Global SIEM: <span class="text-emerald-400">Conectada</span>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const EARTH_RADIUS = 5;
+        let scene, camera, renderer, controls;
+        let earthMesh, cloudsMesh, atmosphereMesh, nodesGroup, arcsGroup;
+        let showDDoS = true, showRansomware = true, showPhishing = true;
+
+        const CITIES = [
+            { name: "Madrid", lat: 40.4168, lon: -3.7038 },
+            { name: "Nueva York", lat: 40.7128, lon: -74.0060 },
+            { name: "Tokio", lat: 35.6762, lon: 139.6503 },
+            { name: "Londres", lat: 51.5074, lon: -0.1278 },
+            { name: "Sídney", lat: -33.8688, lon: 151.2093 },
+            { name: "São Paulo", lat: -23.5505, lon: -46.6333 },
+            { name: "Singapur", lat: 1.3521, lon: 103.8198 },
+            { name: "Frankfurt", lat: 50.1109, lon: 8.6821 }
+        ];
+
+        const ATTACK_TYPES = [
+            { type: "DDoS", color: 0xef4444, cssColor: "text-red-400" },
+            { type: "Ransomware", color: 0xf59e0b, cssColor: "text-amber-400" },
+            { type: "SQL Injection", color: 0x06b6d4, cssColor: "text-cyan-400" }
+        ];
+
+        window.addEventListener('load', () => {
+            initScene();
+            createSpace();
+            createEarth();
+            setupEvents();
+            animate();
+            setInterval(generateAttack, 400);
+        });
+
+        function initScene() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 4, 16);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.35;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 6;
+            controls.maxDistance = 45;
+
+            arcsGroup = new THREE.Group();
+            scene.add(arcsGroup);
+        }
+
+        function createSpace() {
+            const starsGeo = new THREE.BufferGeometry();
+            const pos = new Float32Array(2000 * 3);
+            for(let i=0; i<6000; i++) pos[i] = (Math.random() - 0.5) * 350;
+            starsGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            scene.add(new THREE.Points(starsGeo, new THREE.PointsMaterial({ size: 0.7, color: 0xffffff, opacity: 0.8, transparent: true })));
+        }
+
+        function createEarth() {
+            const textureLoader = new THREE.TextureLoader();
+            const dayTex = textureLoader.load('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg');
+            const nightTex = textureLoader.load('https://unpkg.com/three-globe/example/img/earth-night-lights.jpg');
+
+            const geometry = new THREE.SphereGeometry(EARTH_RADIUS, 64, 64);
+            const earthMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    dayTexture: { value: dayTex },
+                    nightTexture: { value: nightTex },
+                    sunDirection: { value: new THREE.Vector3(1, 0, 0) }
+                },
+                vertexShader: `
+                    varying vec3 vWorldNormal;
+                    varying vec2 vUv;
+                    void main() {
+                        vUv = uv;
+                        vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform sampler2D dayTexture;
+                    uniform sampler2D nightTexture;
+                    uniform vec3 sunDirection;
+                    varying vec3 vWorldNormal;
+                    varying vec2 vUv;
+                    void main() {
+                        vec3 dayColor = texture2D(dayTexture, vUv).rgb * 0.4;
+                        vec3 nightColor = texture2D(nightTexture, vUv).rgb * vec3(1.2, 0.6, 0.6) * 4.0; 
+                        float intensity = dot(vWorldNormal, normalize(sunDirection));
+                        float mixFactor = smoothstep(-0.2, 0.2, intensity);
+                        vec3 finalColor = mix(nightColor, dayColor * max(intensity, 0.05), mixFactor);
+                        gl_FragColor = vec4(finalColor, 1.0);
+                    }
+                `
+            });
+
+            earthMesh = new THREE.Mesh(geometry, earthMaterial);
+            scene.add(earthMesh);
+        }
+
+        function getVector(lat, lon, alt) {
+            const phi = (90 - lat) * (Math.PI / 180);
+            const theta = (lon + 180) * (Math.PI / 180);
+            return new THREE.Vector3(-(alt * Math.sin(phi) * Math.cos(theta)), alt * Math.cos(phi), alt * Math.sin(phi) * Math.sin(theta));
+        }
+
+        function generateAttack() {
+            const origin = CITIES[Math.floor(Math.random() * CITIES.length)];
+            let target = CITIES[Math.floor(Math.random() * CITIES.length)];
+            while(target === origin) target = CITIES[Math.floor(Math.random() * CITIES.length)];
+
+            const attack = ATTACK_TYPES[Math.floor(Math.random() * ATTACK_TYPES.length)];
+
+            if((attack.type === "DDoS" && !showDDoS) || 
+               (attack.type === "Ransomware" && !showRansomware) || 
+               (attack.type === "SQL Injection" && !showPhishing)) return;
+
+            const start = getVector(origin.lat, origin.lon, EARTH_RADIUS + 0.03);
+            const end = getVector(target.lat, target.lon, EARTH_RADIUS + 0.03);
+            const mid = start.clone().add(end).multiplyScalar(0.5).normalize().multiplyScalar(EARTH_RADIUS + 0.4);
+
+            const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
+            const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(20)), new THREE.LineBasicMaterial({ color: attack.color, transparent: true, opacity: 0.8 }));
+            arcsGroup.add(line);
+
+            setTimeout(() => { arcsGroup.remove(line); }, 1000);
+
+            const feed = document.getElementById('attack-feed');
+            const item = document.createElement('div');
+            item.className = "p-1 bg-white/5 rounded border border-white/5 flex justify-between";
+            item.innerHTML = `<span>${origin.name} ➔ ${target.name}</span><span class="${attack.cssColor} font-bold">${attack.type}</span>`;
+            feed.insertBefore(item, feed.firstChild);
+            if(feed.children.length > 5) feed.removeChild(feed.lastChild);
+        }
+
+        function setupEvents() {
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+            document.getElementById('toggle-ddos').addEventListener('click', (e) => {
+                e.currentTarget.classList.toggle('active');
+                showDDoS = e.currentTarget.classList.contains('active');
+            });
+            document.getElementById('toggle-ransomware').addEventListener('click', (e) => {
+                e.currentTarget.classList.toggle('active');
+                showRansomware = e.currentTarget.classList.contains('active');
+            });
+            document.getElementById('toggle-phishing').addEventListener('click', (e) => {
+                e.currentTarget.classList.toggle('active');
+                showPhishing = e.currentTarget.classList.contains('active');
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if(earthMesh) earthMesh.rotation.y += 0.0003;
+            controls.update();
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
