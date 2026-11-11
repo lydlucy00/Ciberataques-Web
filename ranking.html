@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ranking Global de Países Más Atacados</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #010409; font-family: 'Inter', sans-serif; color: #f3f4f6; user-select: none; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .glass-panel {
+            background: rgba(10, 15, 29, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 1rem;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover { border-color: rgba(245, 158, 11, 0.4); transform: translateY(-2px); }
+        .progress-bar { transition: width 0.8s ease-in-out; }
+    </style>
+</head>
+<body class="min-h-screen p-3 md:p-8">
+
+    <div class="max-w-5xl mx-auto space-y-4 md:space-y-6">
+        
+        <!-- Cabecera -->
+        <header class="glass-panel p-4 md:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
+                    <h1 class="text-lg md:text-xl font-bold text-amber-400 font-mono">RANKING GLOBAL EN TIEMPO REAL</h1>
+                </div>
+                <p class="text-xs text-white/50 mt-1">Telemetría de volumen de ciberataques e impacto directo por país</p>
+            </div>
+            
+            <nav class="flex items-center gap-2 text-xs">
+                <a href="index.html" class="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 font-mono">Volver al Radar 3D</a>
+            </nav>
+        </header>
+
+        <!-- Ranking con actualización dinámica -->
+        <main class="glass-panel p-4 md:p-6 space-y-4">
+            <div class="flex justify-between items-center border-b border-white/10 pb-3">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-amber-400 font-mono">Top Países Objetivo (Telemetría SOC Live)</h2>
+                <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded animate-pulse">ACTUALIZANDO...</span>
+            </div>
+            
+            <div id="ranking-list" class="space-y-3">
+                <!-- Se genera dinámicamente con JS -->
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Datos iniciales de los países más atacados
+        const countries = [
+            { id: "usa", rank: 1, name: "Estados Unidos", desc: "Infraestructuras financieras, sanitarias y de defensa como objetivo prioritario de APTs.", traffic: 25.5, count: 482910, color: "text-red-400", bar: "bg-red-500" },
+            { id: "isr", rank: 2, name: "Israel", desc: "Fuerte presión de ataques de denegación de servicio (DDoS) y espionaje gubernamental.", traffic: 12.8, count: 241030, color: "text-red-400", bar: "bg-red-500" },
+            { id: "ukr", rank: 3, name: "Ucrania", desc: "Ciberguerra híbrida: malware de tipo wiper dirigido a la red eléctrica y gubernamental.", traffic: 9.4, count: 182300, color: "text-amber-400", bar: "bg-amber-500" },
+            { id: "twn", rank: 4, name: "Taiwán", desc: "Espionaje enfocado en la industria pesada de semiconductores y microchips.", traffic: 7.1, count: 139420, color: "text-amber-400", bar: "bg-amber-500" },
+            { id: "ind", rank: 5, name: "India", desc: "Elevado volumen de inyecciones maliciosas y ransomware a la banca digital.", traffic: 5.3, count: 98110, color: "text-cyan-400", bar: "bg-cyan-500" },
+            { id: "deu", rank: 6, name: "Alemania", desc: "Ataques a cadenas de suministro industriales y sector automotriz.", traffic: 4.2, count: 76400, color: "text-cyan-400", bar: "bg-cyan-500" }
+        ];
+
+        function renderRanking() {
+            const listContainer = document.getElementById('ranking-list');
+            listContainer.innerHTML = '';
+
+            countries.forEach((country) => {
+                const card = document.createElement('div');
+                card.className = 'glass-card p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3';
+                card.innerHTML = `
+                    <div class="flex items-start md:items-center gap-4 flex-1">
+                        <span class="text-xl font-bold font-mono text-amber-400 w-6">#${country.rank}</span>
+                        <div class="space-y-1 flex-1">
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-base font-bold text-white">${country.name}</h3>
+                            </div>
+                            <p class="text-xs text-white/50 leading-relaxed">${country.desc}</p>
+                            <!-- Barra de progreso dinámica -->
+                            <div class="w-full bg-white/5 h-1.5 rounded-full overflow-hidden mt-2">
+                                <div id="bar-${country.id}" class="progress-bar ${country.bar} h-full" style="width: ${Math.min(country.traffic * 3, 100)}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-left md:text-right shrink-0 flex md:flex-col justify-between md:justify-center border-t md:border-t-0 border-white/5 pt-2 md:pt-0">
+                        <div>
+                            <span id="count-${country.id}" class="text-sm font-bold font-mono ${country.color}">${country.count.toLocaleString()}</span>
+                            <span class="text-[10px] text-white/40 font-mono ml-1 md:ml-0"> atks</span>
+                        </div>
+                        <div class="text-xs font-mono text-white/60">
+                            <span id="traffic-${country.id}">${country.traffic.toFixed(1)}%</span> del tráfico global
+                        </div>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+
+        // Función para simular entrada masiva de ataques en tiempo real
+        function updateLiveMetrics() {
+            countries.forEach((country) => {
+                // Incremento aleatorio de ataques
+                const increment = Math.floor(Math.random() * 450) + 50;
+                country.count += increment;
+
+                // Pequeña variación fluida del porcentaje de tráfico
+                const variation = (Math.random() * 0.4 - 0.2);
+                country.traffic = Math.max(1.0, country.traffic + variation);
+
+                // Actualizar elementos DOM sin recargar la página
+                const countElem = document.getElementById(`count-${country.id}`);
+                const trafficElem = document.getElementById(`traffic-${country.id}`);
+                const barElem = document.getElementById(`bar-${country.id}`);
+
+                if (countElem) countElem.innerText = country.count.toLocaleString();
+                if (trafficElem) trafficElem.innerText = `${country.traffic.toFixed(1)}%`;
+                if (barElem) barElem.style.width = `${Math.min(country.traffic * 3.2, 100)}%`;
+            });
+        }
+
+        window.addEventListener('load', () => {
+            renderRanking();
+            // Actualizar contadores dinámicamente cada 1.2 segundos
+            setInterval(updateLiveMetrics, 1200);
+        });
+    </script>
+</body>
+</html>
